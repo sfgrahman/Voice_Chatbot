@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+from openai import OpenAI
 from utils import get_answer, text_to_speech, autoplay_audio, speech_to_text
 from audio_recorder_streamlit import audio_recorder
 from streamlit_float import *
@@ -29,7 +30,8 @@ st.markdown("""
 st.markdown('<p class="big-font">Integrating OpenAI\'s Speech-to-Text & Text-to-Speech</p>', unsafe_allow_html=True)
 
 st.sidebar.header("Enter OpenAI Key(**Not store anywhere**)")
-os.environ['OPENAI_API_KEY'] = st.sidebar.text_input("Enter your openai keys", type="password")
+api_key = st.sidebar.text_input("Enter your openai keys", type="password")
+client = OpenAI(api_key=api_key)
 
 footer_container = st.container()
 with footer_container:
@@ -49,7 +51,7 @@ if audio_bytes:
         with open(webm_file_path, "wb") as f:
             f.write(audio_bytes)
         
-        transcript = speech_to_text(webm_file_path)
+        transcript = speech_to_text(client,webm_file_path)
         if transcript:
             st.session_state.messages.append({"role": "user", "content": transcript})
             with st.chat_message("user"):
@@ -59,9 +61,9 @@ if audio_bytes:
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking🤔..."):
-            final_response = get_answer(st.session_state.messages)
+            final_response = get_answer(client,st.session_state.messages)
         with st.spinner("Generating audio response..."):    
-            audio_file = text_to_speech(final_response)
+            audio_file = text_to_speech(client, final_response)
             autoplay_audio(audio_file)
         st.write(final_response)
         st.session_state.messages.append({"role": "assistant", "content": final_response})
